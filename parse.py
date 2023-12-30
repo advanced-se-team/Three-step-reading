@@ -9,15 +9,18 @@ abstract = ''
 introduction = ''
 section_list = []
 conclusion = ''
+reference_list = []
 paragraph_list = []
 image_list = []
 chart_list = []
 
+# specify the input json dir
+json_dir = 'parsedFile.json'
 # specify the output dir
 output_dir = './output'
 
 # alter this to see the run result
-DISPLAY_MODE = False
+DISPLAY_MODE = True
 
 
 class Paragraphs:
@@ -41,9 +44,57 @@ def getParagraphs(json_obj):
 
 
 if __name__ == '__main__':
-    with open('parsedFile.json') as json_file:
+    with open(json_dir) as json_file:
         parsed_json = json.load(json_file)
 
+    # '''
+    # first pass
+    # '''
+    # title = parsed_json.get('Title', '')
+    # abstract = parsed_json.get('Abstract', '')
+    # for section in parsed_json.get('Content', []):
+    #     if section.get('Title', '') == 'INTRODUCTION':
+    #         introduction = section.get('Content', '')
+    #         break
+    # # presented by #title ##subtitle, but `conclusion` and `reference` is not included
+    # for section in parsed_json.get('Content', []):
+    #     section_list.append('#' + section['Title'])
+    #     if len(section['Below']) != 0:
+    #         for subSection in section['Below']:
+    #             section_list.append('##' + subSection['Title'])
+    # if '#CONCLUSION' in section_list:
+    #     section_list.remove('#CONCLUSION')
+    # if '#REFERENCES' in section_list:
+    #     section_list.remove('#REFERENCES')
+    #
+    # for section in reversed(parsed_json.get('Content',[])):
+    #     if section['Title'] == 'CONCLUSION':
+    #         conclusion = section['Content']
+    #         break
+    # idx = conclusion.find('Acknowledgments')
+    # if idx != -1:
+    #     conclusion = conclusion[:idx]
+    #
+    # reference = parsed_json
+    #
+    # if DISPLAY_MODE:
+    #     margin = '\n---------\n'
+    #     print(title, margin, abstract, margin, section_list, margin, introduction, margin, conclusion)
+    #
+    # '''
+    # second pass
+    # '''
+    #
+    # for section in parsed_json['Content']:
+    #     if section['Title'] != 'INTRODUCTION':
+    #         getParagraphs(section)
+    #
+    # if DISPLAY_MODE:
+    #     print('## Paragraph content shows below ## \n')
+    #     for item in paragraph_list:
+    #         print('name: ', item.name, '\n content:', item.content)
+    #
+    # page_num = 0
     '''
     first pass
     '''
@@ -53,35 +104,45 @@ if __name__ == '__main__':
         if section.get('Title', '') == 'INTRODUCTION':
             introduction = section.get('Content', '')
             break
-    # presented by #title ##subtitle, but `conclusion` and `reference` is not included
-    for section in parsed_json.get('Content', []):
-        section_list.append('#' + section['Title'])
-        if len(section['Below']) != 0:
-            for subSection in section['Below']:
-                section_list.append('##' + subSection['Title'])
-    if '#CONCLUSION' in section_list:
-        section_list.remove('#CONCLUSION')
-    if '#REFERENCES' in section_list:
-        section_list.remove('#REFERENCES')
 
-    for section in reversed(parsed_json['Content']):
-        if section['Title'] == 'CONCLUSION':
-            conclusion = section['Content']
+    # presented by #title ##subtitle, but `conclusion` and `reference` is not included
+    section_list = ['#' + section.get('Title', '') for section in parsed_json.get('Content', [])]
+    section_list += ['##' + subSection.get('Title', '') for section in parsed_json.get('Content', []) if
+                     len(section.get('Below', [])) != 0
+                     for subSection in section['Below']]
+
+    section_list = [item for item in section_list if item not in ['#CONCLUSION', '#REFERENCES']]
+
+    for section in reversed(parsed_json.get('Content', [])):
+        if section.get('Title', '') == 'CONCLUSION':
+            conclusion = section.get('Content', '')
             break
+
     idx = conclusion.find('Acknowledgments')
     if idx != -1:
         conclusion = conclusion[:idx]
 
-    if DISPLAY_MODE:
-        margin = '\n---------\n'
-        print(title, margin, abstract, margin, section_list, margin, introduction, margin, conclusion)
+    for section in reversed(parsed_json.get('Content', [])):
+        reference = ''
+        if section.get('Title', '') == 'REFERENCES':
+            reference = section.get('Content', '')
+            reference_list = reference.split('\n')
+            break
+    # remove reference first emtpy element
+    if reference_list[0] == '':
+        reference_list = reference_list[1:]
+
+    # if DISPLAY_MODE:
+    #     margin = '\n---------\n'
+    #     print(title, margin, abstract, margin, section_list, margin, introduction, margin, conclusion, margin, reference_list)
 
     '''
     second pass
     '''
 
-    for section in parsed_json['Content']:
-        if section['Title'] != 'INTRODUCTION':
+    # Content of the paper
+    for section in parsed_json.get('Content', []):
+        if section.get('Title', '') != 'INTRODUCTION':
             getParagraphs(section)
 
     if DISPLAY_MODE:
@@ -113,3 +174,4 @@ if __name__ == '__main__':
 
     if DISPLAY_MODE:
         print(f'The size of each list is {len(image_list)}, {len(chart_list)}')
+
